@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Democratic Yinsh</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--ink:#0e1220;--ink2:#161d33;--ink3:#202a47;--line:#2d3a5f;--paper:#f1ecdf;--mute:#9aa6c4;--gold:#d9b25f;--jade:#4cc3a6;--v:#5b45d6}
+html{background:var(--ink)}*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--paper);font:400 15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+h1{font:800 clamp(1.7rem,4vw,2.5rem)/1.1 Georgia,serif;margin:0}h3{margin:.2em 0;font:700 1.05rem Georgia,serif}
+header{max-width:1240px;margin:0 auto;padding:22px 18px 0}header p{margin:.4em 0 0;color:var(--mute);max-width:80ch}
+.layout{display:grid;grid-template-columns:minmax(0,680px) minmax(0,1fr);gap:22px;max-width:1240px;margin:0 auto;padding:18px}
+@media(max-width:980px){.layout{grid-template-columns:1fr}}
+.status{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.pl{background:var(--ink2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:.88rem}.pl.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}.pl b{font:700 1.05rem Georgia,serif}.pl span{color:var(--mute)}
+.board{position:relative;background:radial-gradient(circle at 50% 40%,#7a5527,#4a3217);border-radius:12px;box-shadow:0 8px 30px #0008;user-select:none;touch-action:manipulation;padding:6px}
+svg{display:block;width:100%;height:auto}.h{fill:transparent}.wi .h{cursor:pointer}.wi .h:hover{fill:#fff3}.op{cursor:pointer}
+.over{position:absolute;inset:0;z-index:6;background:#0b0f1ccc;border-radius:12px;display:none;place-items:center;text-align:center;padding:20px}.over.show{display:grid}.over h2{font:800 2rem Georgia,serif;margin:0 0 6px}
+.controls{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-top:12px;font-size:.88rem}
+select,button{font:inherit;color:var(--paper);background:var(--ink3);border:1px solid var(--line);border-radius:6px;padding:7px 11px}button{cursor:pointer}button:hover:not(:disabled){border-color:var(--gold)}button:disabled{opacity:.45}
+button.primary{background:var(--v);border-color:var(--v);font-weight:600}button.primary:disabled{background:var(--ink3)}
+label{display:flex;gap:6px;align-items:center;color:var(--mute)}input[type=range]{accent-color:var(--v);width:110px}
+.panel{background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:14px;min-height:420px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.tabs button{border-radius:14px;padding:4px 12px;font-size:.82rem}.tabs button.on{background:var(--v);border-color:var(--v)}
+.tab{display:none;overflow:auto;max-height:660px}.tab.on{display:block}.note{color:var(--mute);font-size:.84rem}
+.opt{display:flex;gap:10px;background:var(--ink3);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:7px 0;cursor:pointer;width:100%;text-align:left}.opt.on{border-color:var(--v);background:#2a2760}
+.lt{flex:none;width:26px;height:26px;border-radius:50%;background:var(--v);display:grid;place-items:center;font-weight:800;font-size:.85rem}.opt small{display:block;color:var(--mute);font-size:.78rem}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:3px}
+.log .ln{margin:3px 0;font-size:.86rem}.dim{color:var(--mute)}.chg{font-size:.7rem;padding:1px 6px;border-radius:9px;background:#f0b84a33;color:#f0b84a;margin:0 4px}.win{color:var(--jade);font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:.85rem;margin:6px 0 12px}th,td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--mute);font-weight:500;font-size:.78rem}.n{text-align:right}
+.rules li{margin:.35em 0}.rules ul{padding-left:1.1em}
+</style></head><body>
+<header><h1>Democratic Yinsh</h1><p>Real Yinsh rules, but nobody decides alone. On your turn seven advisors propose actions and you vote from a ballot (or write one in). On the council's turn the same seven advisors debate and a voting program of your choice picks the move.</p></header>
+<div class="layout"><section>
+<div class="status" id="status"></div>
+<div class="board" id="board"></div>
+<div class="controls">
+<label>Council program <select id="prog"></select></label>
+<label>First move <select id="first"><option value="0">You</option><option value="1">Council</option></select></label>
+<label>Rings to win <select id="win"><option value="1">1 · Blitz</option><option value="2">2</option><option value="3" selected>3 · Standard</option></select></label>
+<label>Stubbornness <input type="range" id="stub" min="0" max="100" value="0"></label>
+<label><input type="checkbox" id="hint" checked>Show legal moves</label><label><input type="checkbox" id="fast">Fast council</label>
+<button id="nb">New game</button></div>
+<p class="note" id="progDesc"></p></section>
+<aside class="panel"><div class="tabs" id="tabs"><button data-t="ballot" class="on">Ballot</button><button data-t="debate">Debate</button><button data-t="votes">Votes</button><button data-t="moves">Moves</button><button data-t="rules">Rules</button></div>
+<div class="tab on" id="t-ballot"></div><div class="tab log" id="t-debate"><p class="note">The council's debate appears here on its turn.</p></div><div class="tab" id="t-votes"></div><div class="tab" id="t-moves"></div>
+<div class="tab rules" id="t-rules"><h3>Yinsh, as implemented</h3><ul>
+<li>Hexagonal board of 85 points. Each side places 5 rings, alternating.</li>
+<li><b>Turn:</b> choose a ring, a marker of your colour drops inside it, then the ring slides in a straight line over empty points. It may jump a run of markers (flipping each) and must stop on the first empty point after. It never crosses another ring.</li>
+<li><b>Rows:</b> five markers of one colour in a line are removed, then the owner removes one of their rings (+1 point). Rows made for the opponent score for them first.</li>
+<li><b>Win</b> at the chosen number of rings removed, or by points when all 51 markers are used. A side with no legal move passes.</li></ul>
+<h3>The democratic layer</h3><ul><li>Every decision, even placing rings or picking which row to remove, goes to a vote.</li>
+<li>Hawk chases rows, Guardian blocks, Surveyor wants mobility, Weaver builds links, Pioneer races for rings, Trickster is erratic, Pragmatist balances.</li>
+<li>Stubbornness is how reluctant advisors are to change their minds during debate.</li></ul></div></aside></div>
+<script>
+const $=id=>document.getElementById(id),LO=[2,1,1,1,1,2,2,3,4,5,7],HI=[5,7,8,9,10,10,11,11,11,11,10],valid=(c,r)=>c>=0&&c<=10&&r>=LO[c]&&r<=HI[c],xy=k=>k.split(',').map(Number);
+const PC=['#f1ecdf','#e86a82'],sq=k=>{const[c,r]=xy(k);return'abcdefghijk'[c]+r},DIR=[[0,1],[0,-1],[1,0],[-1,0],[1,1],[-1,-1]];
+const PTS=[];for(let c=0;c<=10;c++)for(let r=LO[c];r<=HI[c];r++)PTS.push(c+','+r);
+const newS=f=>({rings:{},marks:{},turn:f,phase:'place',placed:[0,0],score:[0,0],q:[],cur:0,segs:[],used:0,over:-1,win:+$('win').value});
+const cl=s=>({...s,rings:{...s.rings},marks:{...s.marks},placed:s.placed.slice(),score:s.score.slice(),q:s.q.slice()}),act=s=>s.phase[0]=='s'?s.cur:s.turn;
+function dests(s,k){const[c,r]=xy(k),o=[];for(const[dc,dr]of DIR){let j=0;for(let i=1;;i++){const a=c+dc*i,b=r+dr*i,q=a+','+b;if(!valid(a,b)||s.rings[q]!==undefined)break;if(s.marks[q]!==undefined){j=1;continue}o.push(q);if(j)break}}return o}
+function rows(s,p,n=5,ex=0){const o=[];for(const k in s.marks){if(s.marks[k]!==p)continue;const[c,r]=xy(k);for(const[dc,dr]of[[0,1],[1,0],[1,1]]){const a=[];for(let i=0;i<n;i++){const q=(c+dc*i)+','+(r+dr*i);if(s.marks[q]!==p)break;a.push(q)}if(a.length==n)o.push(a)}}return o}
+function gen(s){const p=act(s),A=[];if(s.phase=='place')PTS.forEach(k=>{if(s.rings[k]===undefined)A.push(['p',k])});
+else if(s.phase=='move'){for(const k in s.rings)if(s.rings[k]===p)dests(s,k).forEach(d=>A.push(['m',k,d]))}
+else if(s.phase=='selRow')s.segs.forEach((g,i)=>A.push(['r',i]));else if(s.phase=='selRing'){for(const k in s.rings)if(s.rings[k]===p)A.push(['g',k])}return A}
+function res(s){while(s.q.length){const p=s.q[0],g=rows(s,p);if(g.length){s.cur=p;s.segs=g;s.phase='selRow';return}s.q.shift()}s.phase='move';s.turn=1-s.turn;if(s.used>=51)fin(s)}
+function fin(s){s.phase='over';s.over=s.score[0]>s.score[1]?0:s.score[1]>s.score[0]?1:2}
+function ap(s0,a){const s=cl(s0),p=act(s0);
+if(a[0]=='p'){s.rings[a[1]]=p;s.placed[p]++;s.turn=1-p;if(s.placed[0]==5&&s.placed[1]==5)s.phase='move'}
+else if(a[0]=='m'){const[c0,r0]=xy(a[1]),[c1,r1]=xy(a[2]),n=Math.max(Math.abs(c1-c0),Math.abs(r1-r0)),dc=Math.sign(c1-c0),dr=Math.sign(r1-r0);
+for(let i=1;i<n;i++){const q=(c0+dc*i)+','+(r0+dr*i);if(s.marks[q]!==undefined)s.marks[q]=1-s.marks[q]}
+s.marks[a[1]]=p;delete s.rings[a[1]];s.rings[a[2]]=p;s.used++;s.q=[p,1-p];res(s)}
+else if(a[0]=='r'){s.segs[a[1]].forEach(x=>delete s.marks[x]);s.phase='selRing'}
+else{delete s.rings[a[1]];s.score[s.cur]++;if(s.score[s.cur]>=s.win)s.over=s.cur,s.phase='over';else res(s)}return s}
+const flips=(s,a)=>{const[c0,r0]=xy(a[1]),[c1,r1]=xy(a[2]),n=Math.max(Math.abs(c1-c0),Math.abs(r1-r0));let f=0;for(let i=1;i<n;i++)if(s.marks[(c0+Math.sign(c1-c0)*i)+','+(r0+Math.sign(r1-r0)*i)]!==undefined)f++;return f}
+const mn=(s,a)=>a[0]=='p'?'ring '+sq(a[1]):a[0]=='m'?sq(a[1])+'→'+sq(a[2])+(flips(s,a)?` (flips ${flips(s,a)})`:''):a[0]=='r'?'row '+sq(s.segs[a[1]][0])+'–'+sq(s.segs[a[1]][4]):'remove ring '+sq(a[1]);
+const at=(s,a)=>a[0]=='m'?a[2]:a[0]=='r'?s.segs[a[1]][2]:a[1];
+const mob=(s,p)=>Object.keys(s.rings).reduce((t,k)=>t+(s.rings[k]===p?dests(s,k).length:0),0),cen=(s,p)=>Object.keys(s.rings).reduce((t,k)=>{if(s.rings[k]!==p)return t;const[c,r]=xy(k);return t-Math.hypot((c-5)*.866,r-c/2-3.5)},0);
+const cnt=(s,p)=>Object.values(s.marks).filter(v=>v===p).length;
+function feats(s,p){const o=1-p;return[s.score[p]-s.score[o],cnt(s,p)-cnt(s,o),rows(s,p,4).length,rows(s,o,4).length,rows(s,p,3).length,mob(s,p)-mob(s,o),cen(s,p)-cen(s,o),rows(s,p).length-rows(s,o).length]}
+const FP=['scores a ring','takes the marker lead','builds a row of four','blocks an enemy four','builds toward three','keeps our rings mobile','holds the centre','sets up a row'];
+const ADV=[{n:'Hawk',c:'#e5534b',tag:'chases rows',p:.35,w:[30,1,6,-1,2,.05,.1,15]},{n:'Guardian',c:'#4a9be0',tag:'guards against threats',p:.6,w:[30,1,1,-6,.5,.1,.2,15]},
+{n:'Surveyor',c:'#35b36b',tag:'wants room to move',p:.5,w:[30,.5,1,-1,.5,.4,.3,15]},{n:'Weaver',c:'#e8a73a',tag:'links markers',p:.3,w:[30,1,3,-2,2.5,.1,.1,15]},
+{n:'Pioneer',c:'#a35be0',tag:'races for rings',p:.5,w:[60,.5,3,-1,1,.1,.5,25]},{n:'Trickster',c:'#e0589a',tag:'has a hunch',p:.7,w:[30,1,3,-2,1.5,.2,.2,15]},{n:'Pragmatist',c:'#4fc3d9',tag:'is the solid choice',p:.55,w:[35,1,3,-3,1,.15,.2,15]}];
+function analyze(s){const mv=gen(s),p=act(s),F0=feats(s,p),fe=mv.map(a=>feats(ap(s,a),p));
+const sc=ADV.map((a,k)=>{const w=k==5?a.w.map(x=>x*(.3+Math.random()*1.4)):a.w;return fe.map(F=>F.reduce((t,x,j)=>t+x*w[j],0)+(k==5?(Math.random()-.5)*6:0)+Math.random()*1e-3)});return{mv,sc,fe,F0}}
+const nrm=sc=>sc.map(a=>{const lo=Math.min(...a),r=Math.max(...a)-lo||1;return a.map(x=>(x-lo)/r)});
+function why(k,i,fe,F0){let b=-1,bj=-1;fe[i].forEach((x,j)=>{const d=ADV[k].w[j]*(x-F0[j]);if(d>b){b=d;bj=j}});return b>.2?FP[bj]:ADV[k].tag}
+const PROGS={plurality:['Plurality','Most first-choice votes wins.'],borda:['Borda count','Every rank on every ballot earns points.'],approval:['Approval','Approve every move nearly as good as your favourite.'],consensus:['Consensus','Play the move the most-unhappy voter dislikes least.'],dictator:['Rotating dictator','One advisor decides alone each turn.'],lottery:['Lottery','A randomly drawn advisor\'s favourite is played.']};
+function council(s,prog,turn){const{mv,sc,fe,F0}=analyze(s),n=mv.length,norm=nrm(sc),ranks=norm.map(a=>[...a.keys()].sort((x,y)=>a[y]-a[x])),props=ranks.map(r=>r[0]),tot=i=>norm.reduce((t,a)=>t+a[i],0),best=c=>c.reduce((x,y)=>tot(y)>tot(x)?y:x);
+const c0=new Array(n).fill(0);ranks.forEach(r=>c0[r[0]]++);const lead=c0.reduce((x,y,i)=>y>c0[x]||(y===c0[x]&&tot(i)>tot(x))?i:x,0),st=+$('stub').value/100;
+const changed=ADV.map((a,k)=>{if(ranks[k][0]===lead)return false;if(Math.random()<a.p*(1-st)*(norm[k][lead]>=.7?1:.12)){ranks[k].splice(ranks[k].indexOf(lead),1);ranks[k].unshift(lead);return true}return false});
+const fin=ranks.map(r=>r[0]),pos=ranks.map(r=>{const p=[];r.forEach((x,i)=>p[x]=i);return p}),all=[...Array(n).keys()],metric=new Array(n).fill(0),pk=m=>all.filter(i=>m[i]===Math.max(...m));let unit,label;
+if(prog=='plurality'){fin.forEach(i=>metric[i]++);unit='votes';label=m=>`${m}/7 votes`}
+else if(prog=='borda'){pos.forEach(p=>p.forEach((q,i)=>metric[i]+=n-1-q));unit='points';label=m=>`${m} Borda points`}
+else if(prog=='approval'){norm.forEach(a=>a.forEach((x,i)=>{if(x>=.85)metric[i]++}));unit='approvals';label=m=>`approved by ${m}/7`}
+else if(prog=='consensus'){all.forEach(i=>metric[i]=-Math.max(...norm.map(a=>1-a[i])));unit='regret';label=m=>`worst-off advisor regret ${Math.round(-m*100)}%`}
+else if(prog=='dictator'){const d=turn%7;metric[fin[d]]=1;unit='dictator';label=()=>`${ADV[d].n} decides alone`}
+else{const d=Math.random()*7|0;metric[fin[d]]=1;unit='draw';label=()=>`lottery drew ${ADV[d].n}`}
+return{s,mv,n,props,fin,changed,win:best(pk(metric)),metric,label,unit,fe,F0}}
+let G={stats:ADV.map(()=>({w:0,t:0,f:0}))};
+function drawBoard(){const S=50,P=34,pt=k=>{const[c,r]=xy(k);return[c*.866*S,-(r-c/2)*S]},ys=PTS.map(k=>pt(k)[1]),y0=Math.min(...ys),W=8.66*S+2*P,H=Math.max(...ys)-y0+2*P,o=k=>{const[x,y]=pt(k);return[x+P,y-y0+P]},s=G.s;
+let h=`<svg viewBox="0 0 ${W} ${H}" class="${G.writeIn?'wi':''}"><defs><marker id="ah" markerWidth="5" markerHeight="5" refX="3" refY="2.5" orient="auto"><path d="M0,0L5,2.5L0,5z" fill="#ffd34d"/></marker></defs>`;
+PTS.forEach(k=>{const[c,r]=xy(k);[[0,1],[1,0],[1,1]].forEach(([dc,dr])=>{const q=(c+dc)+','+(r+dr);if(valid(c+dc,r+dr)){const a=o(k),b=o(q);h+=`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#ffffff40"/>`}})});
+const cand=new Set(s.phase=='selRow'?s.segs.flat():[]);
+for(const k in s.marks){const[x,y]=o(k);h+=`<circle cx="${x}" cy="${y}" r="9" fill="${PC[s.marks[k]]}" ${cand.has(k)?'stroke="#ffd34d" stroke-width="3"':'stroke="#0005"'}/>`}
+for(const k in s.rings){const[x,y]=o(k);h+=`<circle cx="${x}" cy="${y}" r="19" fill="none" stroke="${PC[s.rings[k]]}" stroke-width="6"/>`+((G.last||[]).includes(k)?`<circle cx="${x}" cy="${y}" r="25" fill="none" stroke="#ffffffa0" stroke-width="2"/>`:'')}
+const sel=G.sel!=null&&G.opts?G.opts[G.sel].a:G.wi;
+if(G.wiFrom&&$('hint').checked)dests(s,G.wiFrom).forEach(k=>{const[x,y]=o(k);h+=`<circle cx="${x}" cy="${y}" r="5" fill="#ffd34d"/>`});
+if(G.wiFrom){const[x,y]=o(G.wiFrom);h+=`<circle cx="${x}" cy="${y}" r="25" fill="none" stroke="#ffd34d" stroke-width="3"/>`}
+if(sel&&sel[0]=='m'){const a=o(sel[1]),b=o(sel[2]);h+=`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#ffd34d" stroke-width="3" stroke-dasharray="6 4" marker-end="url(#ah)"/>`}
+PTS.forEach(k=>{const[x,y]=o(k);h+=`<circle class="h" data-k="${k}" cx="${x}" cy="${y}" r="20"/>`});
+if(G.opts&&!G.writeIn)G.opts.forEach((p,i)=>{const[x,y]=o(at(s,p.a));h+=`<g class="op" data-i="${i}"><circle cx="${x}" cy="${y}" r="15" fill="${i===G.sel?'#5b45d6':'#f6f2e6'}" stroke="#5b45d6" stroke-width="3"/><text x="${x}" y="${y+5}" text-anchor="middle" font-weight="800" font-size="14" fill="${i===G.sel?'#fff':'#111'}" style="pointer-events:none">${'ABCDEF'[i]}</text></g>`});
+const ov=$('over')?$('over').outerHTML:'<div class="over" id="over"></div>';$('board').innerHTML=h+'</svg>'+ov}
+function status(){const s=G.s;$('status').innerHTML=[0,1].map(i=>`<div class="pl ${act(s)===i&&s.phase!='over'?'on':''}"><b>${i?'Council (coral)':'You (ivory)'}</b><br><span>${s.score[i]}/${s.win} rings won · ${Object.values(s.rings).filter(v=>v===i).length} on board${s.phase=='place'?' · '+(5-s.placed[i])+' to place':''} · pool ${51-s.used}</span></div>`).join('')}
+function tab(t){document.querySelectorAll('.tab').forEach(e=>e.classList.toggle('on',e.id==='t-'+t));document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t))}
+$('tabs').onclick=e=>{if(e.target.dataset.t)tab(e.target.dataset.t)};
+function newGame(){clearTimeout(G.tm);G.win=+$('win').value;G.s=newS(+$('first').value);G.hist=[];G.last=null;G.opts=null;G.sel=null;G.wi=null;G.wiFrom=null;G.writeIn=0;G.n=0;G.passes=0;G.stats=ADV.map(()=>({w:0,t:0,f:0}));G.lv=null;
+$('board').innerHTML='';drawBoard();status();moves();votes();$('t-debate').innerHTML='<p class="note">The council\'s debate appears here on its turn.</p>';startTurn()}
+function startTurn(){const s=G.s;if(s.phase=='over')return endGame();status();
+if(!gen(s).length){G.passes++;if(G.passes>1){const t=cl(s);fin(t);G.s=t;return endGame()}G.hist.push({side:act(s),txt:'pass (no legal move)'});const t=cl(s);t.turn=1-t.turn;G.s=t;moves();return G.tm=setTimeout(startTurn,400)}
+G.passes=0;act(s)===0?ballot():councilTurn()}
+function ballot(){tab('ballot');const s=G.s,{mv,sc,fe,F0}=analyze(s),n=mv.length,norm=nrm(sc),first=norm.map(a=>a.indexOf(Math.max(...a))),tot=i=>norm.reduce((t,a)=>t+a[i],0),gr={};
+first.forEach((m,k)=>(gr[m]=gr[m]||[]).push(k));let list=Object.keys(gr).map(Number).sort((a,b)=>gr[b].length-gr[a].length||tot(b)-tot(a));
+if(list.length<4)for(const i of[...Array(n).keys()].sort((a,b)=>tot(b)-tot(a)))if(!list.includes(i)&&list.length<4)list.push(i);list=list.slice(0,6);
+G.acts=mv;G.opts=list.map(i=>{const adv=gr[i]||[];return{a:mv[i],adv,txt:mn(s,mv[i]),reasons:(adv.length?adv:[6]).slice(0,2).map(k=>`${ADV[k].n}: ${why(k,i,fe,F0)}`)}});G.sel=null;G.wi=null;G.wiFrom=null;G.writeIn=0;
+const T={place:'Place a ring',move:'Move a ring',selRow:'You made a row — choose which to remove',selRing:'Remove one of your rings'}[s.phase];
+$('t-ballot').innerHTML=`<p class="note"><b>${T}.</b> Your advisors propose. Pick one and cast your vote, or click a lettered circle on the board.</p><div id="opts">${G.opts.map((o,i)=>`<button class="opt" data-i="${i}"><span class="lt">${'ABCDEF'[i]}</span><span><b>${o.txt}</b> ${o.adv.map(k=>`<span class="dot" style="background:${ADV[k].c}"></span>`).join('')}<small>${o.reasons.join(' · ')}</small></span></button>`).join('')}</div><button id="wib">Write-in: choose any legal action on the board</button> <button class="primary" id="cast" disabled>Cast my vote</button><p class="note" id="wiN"></p>`;
+$('opts').onclick=e=>{const b=e.target.closest('.opt');if(b)pick(+b.dataset.i)};$('wib').onclick=()=>{G.writeIn=!G.writeIn;G.sel=null;G.wi=null;G.wiFrom=null;$('wiN').textContent=G.writeIn?(s.phase=='move'?'Click one of your rings, then a destination.':'Click the point on the board.'):'';upd()};$('cast').onclick=cast;drawBoard()}
+function upd(){document.querySelectorAll('.opt').forEach((o,i)=>o.classList.toggle('on',i===G.sel));const c=$('cast');if(c)c.disabled=G.sel==null&&!G.wi;drawBoard()}
+function pick(i){G.sel=i;G.wi=null;G.writeIn=0;G.wiFrom=null;upd()}
+function cast(){const a=G.sel!=null?G.opts[G.sel].a:G.wi;if(!a)return;const o=G.sel!=null?G.opts[G.sel]:null,how=o?`ballot ${'ABCDEF'[G.sel]}${o.adv.length?' · backed by '+o.adv.map(k=>ADV[k].n).join(', '):''}`:'write-in';
+G.opts=null;G.sel=null;G.wi=null;G.wiFrom=null;$('t-ballot').innerHTML='<p class="note">Vote cast.</p>';doAct(a,0,how)}
+$('board').addEventListener('click',e=>{const op=e.target.closest('.op');if(op&&G.opts)return pick(+op.dataset.i);const k=e.target.dataset&&e.target.dataset.k;if(!k||!G.writeIn||act(G.s)!==0||G.s.phase=='over')return;
+const s=G.s,A=G.acts;let a=null;if(s.phase=='move'){if(s.rings[k]===0&&dests(s,k).length){G.wiFrom=k;G.wi=null}else if(G.wiFrom)a=A.find(x=>x[1]===G.wiFrom&&x[2]===k)}else if(s.phase=='selRow'){const i=s.segs.findIndex(g=>g.includes(k));if(i>=0)a=['r',i]}else a=A.find(x=>x[1]===k);
+if(a){G.wi=a;G.wiFrom=null;G.writeIn=0;$('wiN').textContent='Write-in: '+mn(s,a)}upd()});
+function councilTurn(){tab('debate');const prog=$('prog').value,s=G.s,R=council(s,prog,G.n),mv=R.mv,L=[],nm=k=>`<b style="color:${ADV[k].c}">${ADV[k].n}</b>`,M=i=>mn(s,mv[i]);
+L.push('<div class="ln dim">Council convenes. Each advisor proposes.</div>');ADV.forEach((a,k)=>L.push(`<div class="ln">${nm(k)} ${M(R.props[k])} <span class="dim">— ${why(k,R.props[k],R.fe,R.F0)}.</span></div>`));
+L.push(`<div class="ln dim">Program: ${PROGS[prog][0]} — ${PROGS[prog][1]}</div><div class="ln dim">Debate: argue and lock in final votes.</div>`);
+ADV.forEach((a,k)=>L.push(`<div class="ln">${nm(k)} ${R.changed[k]?`<span class="chg">changed mind</span> Changed to ${M(R.fin[k])}.`:`Sticking with ${M(R.fin[k])}.`}</div>`));
+L.push(`<div class="ln win">${M(R.win)} wins: ${R.label(R.metric[R.win])}.</div>`);$('t-debate').innerHTML='';let i=0;const d=$('fast').checked?30:300;
+const step=()=>{if(i<L.length){$('t-debate').insertAdjacentHTML('beforeend',L[i++]);$('t-debate').scrollTop=1e5;G.tm=setTimeout(step,d)}else{ADV.forEach((a,k)=>{const t=G.stats[k];t.t++;if(R.fin[k]===R.win)t.w++;if(R.changed[k])t.f++});votes({R,M});doAct(mv[R.win],1,`${PROGS[prog][0]}: ${R.label(R.metric[R.win])}`)}};G.tm=setTimeout(step,200)}
+function doAct(a,side,info){const s=G.s;G.hist.push({side,txt:mn(s,a),info});G.n++;G.last=[a[1],a[2]].filter(Boolean).map(k=>a[0]=='r'?null:k);if(a[0]=='r')G.last=[];G.s=ap(s,a);drawBoard();status();moves();G.tm=setTimeout(startTurn,side?400:250)}
+function endGame(){const s=G.s;status();const o=$('over');if(!o)return;o.innerHTML=`<div><h2>${s.over==0?'You win!':s.over==1?'The council wins':'Draw'}</h2><p>${s.over==2?'Equal rings when the marker pool ran out.':'Rings won '+s.score[0]+'–'+s.score[1]+'.'}</p><button class="primary" id="again">Play again</button></div>`;o.classList.add('show');$('again').onclick=newGame;votes();tab('votes')}
+function moves(){$('t-moves').innerHTML=G.hist.length?`<table><tr><th>#</th><th>Side</th><th>Action</th><th>How</th></tr>${G.hist.map((h,i)=>`<tr><td>${i+1}</td><td>${h.side?'Council':'You'}</td><td>${h.txt}</td><td class="note">${h.info||''}</td></tr>`).join('')}</table>`:'<p class="note">No moves yet.</p>'}
+function votes(v){if(v)G.lv=v;v=G.lv;let h='';if(v){const{R,M}=v,idx=[...R.metric.keys()].filter(i=>R.metric[i]!==0||R.fin.includes(i)).sort((a,b)=>R.metric[b]-R.metric[a]).slice(0,6);
+h+=`<h3>Latest council vote</h3><table><tr><th>Action</th><th>Backed by (final)</th><th class="n">${R.unit}</th></tr>${idx.map(i=>`<tr><td>${i===R.win?'★ ':''}${M(i)}</td><td>${ADV.map((a,k)=>R.fin[k]===i?`<span class="dot" style="background:${a.c}" title="${a.n}"></span>`:'').join('')}</td><td class="n">${R.unit==='regret'?Math.round(-R.metric[i]*100)+'%':R.metric[i]}</td></tr>`).join('')}</table>`}
+h+=`<h3>Advisor loyalty</h3><table><tr><th>Advisor</th><th class="n">With council</th><th class="n">Changed mind</th></tr>${ADV.map((a,k)=>{const t=G.stats[k];return`<tr><td><span class="dot" style="background:${a.c}"></span>${a.n}</td><td class="n">${t.t?Math.round(100*t.w/t.t)+'%':'-'}</td><td class="n">${t.f}</td></tr>`}).join('')}</table><p class="note">"With council" = how often the advisor's final vote matched the action played.</p>`;$('t-votes').innerHTML=h}
+$('prog').innerHTML=Object.entries(PROGS).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('');$('prog').onchange=()=>$('progDesc').textContent=PROGS[$('prog').value][1];$('prog').onchange();
+$('nb').onclick=newGame;$('hint').onchange=drawBoard;newGame();
+</script></body></html>
